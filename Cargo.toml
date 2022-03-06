@@ -1,0 +1,24 @@
+[package]
+name = "hconnect"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+base64 = "0.13"
+bytes = "1.1"
+clap = { version = "3.1", features = ["derive"] }
+cross-krb5 = { version = "0.2", default-features = false, optional = true }
+dirs = "4.0"
+env_logger = "0.9"
+futures = "0.3"
+futures-util = { version = "0.3", default-features = false }
+http = "0.2"
+hyper = { version = "0.14", features = ["http1", "http2", "client", "tcp"] }
+netrc = "0.4"
+parking_lot = "0.12"
+thiserror = "1.0"
+tokio = { version = "1", features = ["io-std", "rt-multi-thread", "net", "macros", "sync", "signal"] }
+#tower = { version = "0.4", features = ["util"] }
