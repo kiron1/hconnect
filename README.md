@@ -1,7 +1,7 @@
 # hconnect
 
 `hconnect` can establish a TCP connection to a host behind a proxy. It is
-similar to [`corkskrew`][corkscrew] or [`nc -Xconnect -x...`][ncx], _but_ can
+similar to [`corkscrew`][corkscrew] or [`nc -Xconnect -x...`][ncx], _but_ can
 authenticate against a proxy using the [basic][basic] or [negotiate][negotiate]
 via [Kerberos][kerberos] (using the [GSS-API](gssapi) Linux and macOS or
 [SSPI][sspi] on Windows) authorization method 
@@ -32,7 +32,7 @@ ProxyCommand hconnect proxy.example.com:8080 %h:%p
 This source code is under the [MIT](https://opensource.org/licenses/MIT) license
 with the exceptions mentioned in "Third party source code in this repository".
 
-[corkskrew]: https://github.com/bryanpkc/corkscrew "Corkscrew is a tool for tunneling SSH through HTTP proxies"
+[corkscrew]: https://github.com/bryanpkc/corkscrew "Corkscrew is a tool for tunneling SSH through HTTP proxies"
 [ncx]: https://man.openbsd.org/nc#X "nc - arbitrary TCP and UDP connections and listens"
 [basic]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#basic_authentication_scheme "Basic authentication scheme"
 [negotiate]: https://datatracker.ietf.org/doc/html/rfc4559.html#section-4 "HTTP Negotiate Authentication Scheme"
