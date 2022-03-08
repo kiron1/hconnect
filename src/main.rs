@@ -6,7 +6,8 @@ use bytes::Bytes;
 use clap::Parser;
 use cross_krb5::{ClientCtx, InitiateFlags};
 use http::header::{HOST, PROXY_AUTHORIZATION};
-use http::{Request, StatusCode, Uri};
+use http::{response, Request, StatusCode, Uri};
+use hyper::client::conn::SendRequest;
 use hyper::{client::conn, Body};
 use netrc::Netrc;
 use tokio::io::{self, AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -123,6 +124,17 @@ enum Handshake {
     AuthenticationRequired,
 }
 
+async fn send_request(
+    mut request_sender: SendRequest<Body>,
+    request: Request<Body>,
+) -> anyhow::Result<(response::Parts, Bytes)> {
+    let response = request_sender.send_request(request).await?;
+    let (parts, body) = response.into_parts();
+    let body = hyper::body::to_bytes(body).await?;
+    request_sender.ready().await?;
+    Ok((parts, body))
+}
+
 async fn handshake<T: AsRef<str>>(
     (proxy_host, proxy_port): (T, u16),
     target: String,
@@ -130,7 +142,7 @@ async fn handshake<T: AsRef<str>>(
 ) -> anyhow::Result<Handshake> {
     let stream = TcpStream::connect((proxy_host.as_ref(), proxy_port)).await?;
 
-    let (mut request_sender, connection) = conn::handshake(stream).await?;
+    let (request_sender, connection) = conn::handshake(stream).await?;
 
     // spawn a task to poll the connection and drive the HTTP state
     let task = tokio::spawn(async move {
@@ -153,22 +165,18 @@ async fn handshake<T: AsRef<str>>(
     };
     let request = request.body(Body::from(""))?;
 
-    let response = request_sender.send_request(request).await?;
+    let (response, _body) = send_request(request_sender, request).await?;
 
-    if response.status() == StatusCode::OK {
-        let _body = hyper::body::to_bytes(response.into_body()).await?;
-        request_sender.ready().await?;
+    if response.status == StatusCode::OK {
         let (io, read_buf) = task.await??;
         Ok(Handshake::Success(io, read_buf))
-    } else if response.status() == StatusCode::PROXY_AUTHENTICATION_REQUIRED {
-        let _body = hyper::body::to_bytes(response.into_body()).await?;
-        request_sender.ready().await?;
+    } else if response.status == StatusCode::PROXY_AUTHENTICATION_REQUIRED {
         let (_io, _read_buf) = task.await??;
         Ok(Handshake::AuthenticationRequired)
     } else {
         Err(anyhow::anyhow!(
             "unexpected HTTP status code: {}",
-            response.status()
+            response.status
         ))
     }
 }
