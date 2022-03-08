@@ -23,6 +23,12 @@ struct Args {
     #[clap(short, long, parse(from_occurrences))]
     /// Enable more verbose output
     verbose: usize,
+    #[clap(long)]
+    ///  Force usage of basic authorization
+    basic: bool,
+    #[clap(long)]
+    /// Force usage of negotiate authorization
+    negotiate: bool,
     #[clap(long, default_value = "30")]
     /// Maximum time in seconds that hconnect will use for the connection phase
     connect_timeout: f32, //std::time::Duration,
@@ -85,7 +91,7 @@ fn netrc_authorization(host: &str) -> anyhow::Result<Option<String>> {
     }
 }
 
-fn kerberos_authorization(host: &str) -> anyhow::Result<String> {
+fn kerberos_authorization(host: &str) -> anyhow::Result<Option<String>> {
     let principal = format!("HTTP/{}", host);
 
     let client_ctx = ClientCtx::initiate(InitiateFlags::empty(), None, &principal);
@@ -94,16 +100,16 @@ fn kerberos_authorization(host: &str) -> anyhow::Result<String> {
         Ok((_pending, token)) => {
             let b64token = base64::encode(&*token);
             let token = format!("Negotiate {}", b64token);
-            Ok(token)
+            Ok(Some(token))
         }
         Err(cause) => Err(cause).context("proxy authorization"),
     }
 }
 
-fn authorization(host: &str) -> anyhow::Result<String> {
+fn authorization(host: &str) -> anyhow::Result<Option<String>> {
     // No netrc entry found, try Kerberos
     match netrc_authorization(host) {
-        Ok(Some(token)) => Ok(token),
+        Ok(token) => Ok(token),
         Ok(None) => kerberos_authorization(host),
         Err(cause) => Err(cause),
     }
@@ -188,9 +194,17 @@ async fn main() -> anyhow::Result<()> {
 
     let proxy = uri_to_addr(&args.proxy)?;
 
+    let auth = if args.negotiate {
+        kerberos_authorization(&proxy.0)?
+    } else if args.basic {
+        netrc_authorization(&proxy.0)?
+    } else {
+        None
+    };
+
     let h = timeout(
         connect_timeout,
-        handshake(proxy.clone(), args.target.clone(), None),
+        handshake(proxy.clone(), args.target.clone(), auth),
     )
     .await??;
 
@@ -198,7 +212,10 @@ async fn main() -> anyhow::Result<()> {
         Handshake::Success(io, buf) => Ok((io, buf)),
         Handshake::AuthenticationRequired => {
             let auth = authorization(&proxy.0)?;
-            let h = timeout(connect_timeout, handshake(proxy, args.target, Some(auth))).await??;
+            auth.ok_or(anyhow::bail!(
+                "authentication required, but not authorization available"
+            ))?;
+            let h = timeout(connect_timeout, handshake(proxy, args.target, auth)).await??;
             match h {
                 Handshake::Success(io, buf) => Ok((io, buf)),
                 Handshake::AuthenticationRequired => {
