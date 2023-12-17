@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@master
       - name: Install Rust (rustup)
         run: rustup update stable --no-self-update && rustup default stable
+      - name: Install Linux dependency
+        run: sudo apt-get install libkrb5-dev
       - name: Publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
