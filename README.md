@@ -4,19 +4,19 @@
 similar to [`corkscrew`][corkscrew] or [`nc -Xconnect -x...`][ncx], _but_ can
 authenticate against a proxy using the [basic][basic] or [negotiate][negotiate]
 via [Kerberos][kerberos] (using the [GSS-API](gssapi) Linux and macOS or
-[SSPI][sspi] on Windows) authorization method 
+[SSPI][sspi] on Windows) authorization method
 
 ## Usage
 
 The following command will establish a TCP connection with the host behind the
-proxy `proxy.exmaple.com` listening on port `8080`. When the proxy responds
-with _407 Proxy Authentication Required_, when the file `~/.netrc` exists
-`hconnect` will consult it for an entry for the given post host. If no such
-entry can be found or the file does not exists, `hconnect` will try to generate
-a Kerberos token.
+proxy `proxy.exmaple.com` listening on port `8080`. When the proxy responds with
+_407 Proxy Authentication Required_, when the file `~/.netrc` exists `hconnect`
+will consult it for an entry for the given post host. If no such entry can be
+found or the file does not exists, `hconnect` will try to generate a Kerberos
+token.
 
 ```sh
-hconnect proxy.example.com:8080 %h:%p
+hconnect --proxy proxy.example.com:8080 %h:%p
 ```
 
 ### SSH
@@ -24,7 +24,7 @@ hconnect proxy.example.com:8080 %h:%p
 Place the following fragment in your [`~/.ssh/config`][sshconfig] file:
 
 ```
-ProxyCommand hconnect proxy.example.com:8080 %h:%p
+ProxyCommand hconnect --proxy proxy.example.com:8080 %h:%p
 ```
 
 ## License
